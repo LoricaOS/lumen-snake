@@ -302,6 +302,28 @@ static void feed_key(char k)
     }
 }
 
+/* ── Menu ─────────────────────────────────────────────────────────────── */
+enum { CMD_NEW = 1, CMD_PAUSE, CMD_CLOSE };
+static void publish_menu(void)
+{
+    lumen_set_menu_t m;
+    glyph_menu_reset(&m, g.lwin->id);
+    int col = glyph_menu_add_col(&m, "Game");
+    glyph_menu_add_item(&m, col, "New Game", CMD_NEW);
+    glyph_menu_add_item(&m, col, "Pause", CMD_PAUSE);
+    glyph_menu_add_sep(&m, col);
+    glyph_menu_add_item(&m, col, "Close", CMD_CLOSE);
+    lumen_window_set_menu(g.lwin, &m);
+}
+static void menu_invoke(uint32_t cmd)
+{
+    switch (cmd) {
+    case CMD_NEW:   new_game(); g.dirty = 1; break;
+    case CMD_PAUSE: if (!g.over) { g.paused = !g.paused; g.dirty = 1; } break;
+    case CMD_CLOSE: g.done = 1; break;
+    }
+}
+
 /* ── Main ─────────────────────────────────────────────────────────────── */
 int main(int argc, char **argv)
 {
@@ -325,6 +347,7 @@ int main(int argc, char **argv)
     new_game();
     g.dirty = 1;
     render();
+    publish_menu();
     dprintf(2, "[snake] connected %dx%d\n", g.lwin->w, g.lwin->h);
 
     while (!s_term && !g.done) {
@@ -336,6 +359,7 @@ int main(int argc, char **argv)
         if (r < 0) break;
         if (r == 1) {
             if (ev.type == LUMEN_EV_CLOSE_REQUEST) break;
+            if (ev.type == LUMEN_EV_MENU_INVOKE) menu_invoke(ev.menu.command);
             if (ev.type == LUMEN_EV_KEY && ev.key.pressed) {
                 char k = (char)ev.key.keycode;
                 if (k == KEY_ESC) break;
